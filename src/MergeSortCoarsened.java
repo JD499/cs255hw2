@@ -71,8 +71,8 @@ public class MergeSortCoarsened {
 
   public static void mergesortCoarsened(double[] A, int p, int r, int k) {
     if (r - p + 1 <= k) {
-      insertionSort(A, A.length);
-      return;
+        insertionSort(A, p, r);
+        return;
     }
     int q = (p + r) / 2;
     mergesortCoarsened(A, p, q, k);
@@ -121,15 +121,16 @@ public class MergeSortCoarsened {
     }
   }
 
-  public static void insertionSort(double[] A, int n) {
-    for (int i = 1; i < n; i++) {
-      double key = A[i];
-      int j = i - 1;
-      while (j >= 0 && A[j] > key) {
-        A[j + 1] = A[j];
-        j = j - 1;
-      }
-      A[j + 1] = key;
+    public static void insertionSort(double[] A, int p, int r) {
+        for (int i = p + 1; i <= r; i++) {
+            double key = A[i];
+            int j = i - 1;
+            while (j >= p && A[j] > key) {
+                A[j + 1] = A[j];
+                j = j - 1;
+            }
+            A[j + 1] = key;
+        }
     }
-  }
+
 }

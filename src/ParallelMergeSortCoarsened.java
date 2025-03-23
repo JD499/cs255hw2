@@ -112,7 +112,7 @@ public class ParallelMergeSortCoarsened {
         @Override
         protected void compute() {
             if (r - p + 1 <= k) {
-                insertionSort(A, A.length);
+                insertionSort(A, p, r);
                 return;
             }
             int q = (p + r) / 2;
@@ -174,15 +174,16 @@ public class ParallelMergeSortCoarsened {
         }
     }
 
-    public static void insertionSort(double[] A, int n) {
-        for (int i = 1; i < n; i++) {
+    public static void insertionSort(double[] A, int p, int r) {
+        for (int i = p + 1; i <= r; i++) {
             double key = A[i];
             int j = i - 1;
-            while (j >= 0 && A[j] > key) {
+            while (j >= p && A[j] > key) {
                 A[j + 1] = A[j];
                 j = j - 1;
             }
             A[j + 1] = key;
         }
     }
+
 }
