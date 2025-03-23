@@ -79,10 +79,6 @@ public class ParallelMergeSort {
       return;
     int q = (p + r) / 2;
 
-    parallelMergeSort(A, p, q);
-    parallelMergeSort(A, q + 1, r);
-
-    /*
     Thread child1 = new Thread(() -> parallelMergeSort(A, p, q));
     Thread child2 = new Thread(() -> parallelMergeSort(A, q + 1, r));
 
@@ -95,8 +91,6 @@ public class ParallelMergeSort {
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
-
-     */
     pMerge(A, p, q, r);
   }
 
@@ -105,7 +99,7 @@ public class ParallelMergeSort {
 
   public static void pMerge(double[] A, int p, int q, int r) {
     double[] B = new double[r - p + 1];
-    Thread mainThread = new Thread(new PMergeAux(A, p, q, q + 1, r, B, p));
+    Thread mainThread = new Thread(new PMergeAux(A, p, q, q + 1, r, B, 0));
     mainThread.start();
     try {
       mainThread.join();
@@ -113,7 +107,7 @@ public class ParallelMergeSort {
       e.printStackTrace();
     }
 
-   IntStream.rangeClosed(p, r).parallel().forEach(i -> A[i] = B[i]);
+   IntStream.rangeClosed(p, r).parallel().forEach(i -> A[i] = B[i - p]);
   }
 
   static class PMergeAux extends Thread {
@@ -137,6 +131,12 @@ public class ParallelMergeSort {
 
     @Override
     public void run() {
+
+      if (p1 > r1 && p2 > r2) {
+        return;
+      }
+
+
       if (r1 - p1 < r2 - p2) {
         int temp = p1;
         p1 = p2;
