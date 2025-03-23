@@ -1,26 +1,24 @@
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.RecursiveAction;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.IntStream;
 
 public class ParallelMergeSort {
 
-  // Test the implementation
-  public static void main(String[] args) {
-    // Run a manual test on a small array of 10 values.
-    runManualTest();
-    /*
+  private static final ForkJoinPool pool =
+      new ForkJoinPool(Runtime.getRuntime().availableProcessors());
 
-    // Benchmarking on larger arrays.
+  public static void main(String[] args) {
+    runManualTest();
+
     int outerLoops = 10;
     int[] exponents = {3, 4, 5, 6, 7, 8};
     Map<Integer, double[]> preallocated = preallocateArrays(exponents);
     runParallelMergeSort(outerLoops, exponents, preallocated);
-
-     */
   }
 
-  // Preallocate random arrays for various sizes.
   private static Map<Integer, double[]> preallocateArrays(int[] exponents) {
     Map<Integer, double[]> arrays = new HashMap<>();
     for (int exp : exponents) {
@@ -37,7 +35,7 @@ public class ParallelMergeSort {
   }
 
   private static void runParallelMergeSort(
-          int outerLoops, int[] exponents, Map<Integer, double[]> arrays) {
+      int outerLoops, int[] exponents, Map<Integer, double[]> arrays) {
     System.out.println("Running Parallel MergeSort for Benchmarking:");
     for (int loop = 1; loop <= outerLoops; loop++) {
       System.out.println("Iteration " + loop + ":");
@@ -46,7 +44,7 @@ public class ParallelMergeSort {
         double[] original = arrays.get(size);
         double[] toSort = Arrays.copyOf(original, original.length);
         long startTime = System.nanoTime();
-        parallelMergeSort(toSort, 0, toSort.length - 1);
+        pool.invoke(new parallelMergeSort(toSort, 0, toSort.length - 1));
         long elapsed = System.nanoTime() - startTime;
         System.out.println("  Array size " + size + " - Time (ns): " + elapsed);
       }
@@ -65,7 +63,7 @@ public class ParallelMergeSort {
     double[] expectedArray = Arrays.copyOf(testArray, testArray.length);
     Arrays.sort(expectedArray);
 
-    parallelMergeSort(testArray, 0, testArray.length - 1);
+    pool.invoke(new parallelMergeSort(testArray, 0, testArray.length - 1));
     System.out.println("After sorting:  " + Arrays.toString(testArray));
 
     boolean isCorrect = Arrays.equals(testArray, expectedArray);
@@ -73,51 +71,65 @@ public class ParallelMergeSort {
     System.out.println();
   }
 
-
-  public static void parallelMergeSort(double[] A, int p, int r) {
-    if (p >= r)
-      return;
-    int q = (p + r) / 2;
-
-    Thread child1 = new Thread(() -> parallelMergeSort(A, p, q));
-    Thread child2 = new Thread(() -> parallelMergeSort(A, q + 1, r));
-
-    child1.start();
-    child2.start();
-
-    try {
-      child1.join();
-      child2.join();
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
-    pMerge(A, p, q, r);
-  }
-
-
-
-
   public static void pMerge(double[] A, int p, int q, int r) {
     double[] B = new double[r - p + 1];
-    Thread mainThread = new Thread(new PMergeAux(A, p, q, q + 1, r, B, 0));
-    mainThread.start();
-    try {
-      mainThread.join();
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
 
-   IntStream.rangeClosed(p, r).parallel().forEach(i -> A[i] = B[i - p]);
+    pool.invoke(new PMergeAux(A, p, q, q + 1, r, B, 0));
+
+    IntStream.rangeClosed(p, r).parallel().forEach(i -> A[i] = B[i - p]);
   }
 
-  static class PMergeAux extends Thread {
+  public static int findSplitPoint(double[] A, int p, int r, double x) {
+    int low = p;
+    int high = r + 1;
+
+    while (low < high) {
+      int mid = (low + high) / 2;
+      if (x <= A[mid]) {
+        high = mid;
+      } else {
+        low = mid + 1;
+      }
+    }
+
+    return low;
+  }
+
+  static class parallelMergeSort extends RecursiveAction {
     private final double[] A;
+    private final int p;
+    private final int r;
+
+    public parallelMergeSort(double[] A, int p, int r) {
+      this.A = A;
+      this.p = p;
+      this.r = r;
+    }
+
+    @Override
+    protected void compute() {
+      if (p >= r) {
+        return;
+      }
+      int q = (p + r) / 2;
+
+      parallelMergeSort child1 = new parallelMergeSort(A, p, q);
+      parallelMergeSort child2 = new parallelMergeSort(A, q + 1, r);
+
+      invokeAll(child1, child2);
+
+      pMerge(A, p, q, r);
+    }
+  }
+
+  static class PMergeAux extends RecursiveAction {
+    private final double[] A;
+    private final double[] B;
+    private final int p3;
     private int p1;
     private int r1;
     private int p2;
     private int r2;
-    private final double[] B;
-    private final int p3;
 
     public PMergeAux(double[] A, int p1, int r1, int p2, int r2, double[] B, int p3) {
       this.A = A;
@@ -130,12 +142,10 @@ public class ParallelMergeSort {
     }
 
     @Override
-    public void run() {
-
+    protected void compute() {
       if (p1 > r1 && p2 > r2) {
         return;
       }
-
 
       if (r1 - p1 < r2 - p2) {
         int temp = p1;
@@ -153,34 +163,10 @@ public class ParallelMergeSort {
       int q3 = p3 + (q1 - p1) + (q2 - p2);
       B[q3] = x;
 
-      Thread child1 = new Thread(new PMergeAux(A, p1, q1 - 1, p2, q2 - 1, B, p3));
-      Thread child2 = new Thread(new PMergeAux(A, q1 + 1, r1, q2, r2, B, q3 + 1));
+      PMergeAux child1 = new PMergeAux(A, p1, q1 - 1, p2, q2 - 1, B, p3);
+      PMergeAux child2 = new PMergeAux(A, q1 + 1, r1, q2, r2, B, q3 + 1);
 
-      child1.start();
-      child2.start();
-
-      try {
-        child1.join();
-        child2.join();
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
+      invokeAll(child1, child2);
     }
-  }
-
-  public static int findSplitPoint(double[] A, int p, int r, double x) {
-    int low = p;
-    int high = r + 1;
-
-    while (low < high) {
-      int mid = (low + high) / 2;
-      if (x <= A[mid]) {
-        high = mid;
-      } else {
-        low = mid + 1;
-      }
-    }
-
-    return low;
   }
 }

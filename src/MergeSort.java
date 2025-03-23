@@ -4,7 +4,6 @@ import java.util.Map;
 
 public class MergeSort {
   public static void main(String[] args) {
-    // Manual test using a small array of 10 values.
     runManualTest();
 
     int outerLoops = 10;
@@ -13,7 +12,6 @@ public class MergeSort {
     runMergeSort(outerLoops, exponents, preallocated);
   }
 
-  // A simple manual test scenario on a small array.
   private static void runManualTest() {
     System.out.println("Running manual test scenario for Plain MergeSort:");
     double[] testArray = new double[10];
@@ -33,8 +31,6 @@ public class MergeSort {
     System.out.println();
   }
 
-
-  // Preallocate random arrays for various sizes.
   private static Map<Integer, double[]> preallocateArrays(int[] exponents) {
     Map<Integer, double[]> arrays = new HashMap<>();
     for (int exp : exponents) {
@@ -50,9 +46,7 @@ public class MergeSort {
     return arrays;
   }
 
-  // Benchmarking loop for plain MergeSort.
-  private static void runMergeSort(
-          int outerLoops, int[] exponents, Map<Integer, double[]> arrays) {
+  private static void runMergeSort(int outerLoops, int[] exponents, Map<Integer, double[]> arrays) {
     System.out.println("Running Plain MergeSort for Benchmarking:");
     for (int loop = 1; loop <= outerLoops; loop++) {
       System.out.println("Iteration " + loop + ":");
@@ -69,16 +63,13 @@ public class MergeSort {
     }
   }
 
-  // Standard recursive MergeSort.
   public static void mergeSort(double[] A, int p, int r) {
-    if (p >= r)
-      return;
+    if (p >= r) return;
     int q = (p + r) / 2;
     mergeSort(A, p, q);
     mergeSort(A, q + 1, r);
     merge(A, p, q, r);
   }
-
 
   public static void merge(double[] A, int p, int q, int r) {
     int nL = q - p + 1;
