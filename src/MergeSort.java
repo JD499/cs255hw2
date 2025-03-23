@@ -1,34 +1,16 @@
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MergeSort {
   public static void main(String[] args) {
-    runManualTest();
-
     int outerLoops = 10;
     int[] exponents = {3, 4, 5, 6, 7, 8};
     Map<Integer, double[]> preallocated = preallocateArrays(exponents);
-    runMergeSort(outerLoops, exponents, preallocated);
-  }
-
-  private static void runManualTest() {
-    System.out.println("Running manual test scenario for Plain MergeSort:");
-    double[] testArray = new double[10];
-    for (int i = 0; i < testArray.length; i++) {
-      testArray[i] = Math.random();
-    }
-    System.out.println("Before sorting: " + Arrays.toString(testArray));
-
-    double[] expectedArray = Arrays.copyOf(testArray, testArray.length);
-    Arrays.sort(expectedArray);
-
-    mergeSort(testArray, 0, testArray.length - 1);
-    System.out.println("After sorting:  " + Arrays.toString(testArray));
-
-    boolean isCorrect = Arrays.equals(testArray, expectedArray);
-    System.out.println("Sort correct:   " + isCorrect);
-    System.out.println();
+    double[][] results = runMergeSort(outerLoops, exponents, preallocated);
+    saveResultsToCSV(results, exponents, "merge_sort_results.csv");
   }
 
   private static Map<Integer, double[]> preallocateArrays(int[] exponents) {
@@ -46,20 +28,49 @@ public class MergeSort {
     return arrays;
   }
 
-  private static void runMergeSort(int outerLoops, int[] exponents, Map<Integer, double[]> arrays) {
+  private static double[][] runMergeSort(
+      int outerLoops, int[] exponents, Map<Integer, double[]> arrays) {
     System.out.println("Running Plain MergeSort for Benchmarking:");
-    for (int loop = 1; loop <= outerLoops; loop++) {
-      System.out.println("Iteration " + loop + ":");
-      for (int exp : exponents) {
-        int size = (int) Math.pow(10, exp);
+    double[][] runtimes = new double[exponents.length][outerLoops];
+
+    for (int loop = 0; loop < outerLoops; loop++) {
+      System.out.println("Iteration " + (loop + 1) + ":");
+      for (int i = 0; i < exponents.length; i++) {
+        int size = (int) Math.pow(10, exponents[i]);
         double[] original = arrays.get(size);
         double[] toSort = Arrays.copyOf(original, original.length);
         long startTime = System.nanoTime();
         mergeSort(toSort, 0, toSort.length - 1);
         long elapsed = System.nanoTime() - startTime;
-        System.out.println("  Array size " + size + " - Time (ns): " + elapsed);
+        runtimes[i][loop] = elapsed / 1e9; // Convert to seconds
+        System.out.println("  Array size " + size + " - Time (s): " + runtimes[i][loop]);
       }
       System.out.println();
+    }
+    return runtimes;
+  }
+
+  private static void saveResultsToCSV(double[][] runtimes, int[] exponents, String fileName) {
+    try (FileWriter writer = new FileWriter(fileName)) {
+      // Write header
+      writer.write("Array Size,First Run,Average of Remaining 9 Runs\n");
+
+      for (int i = 0; i < exponents.length; i++) {
+        int size = (int) Math.pow(10, exponents[i]);
+        double firstRun = runtimes[i][0];
+        double sum = 0;
+        for (int j = 1; j < runtimes[i].length; j++) {
+          sum += runtimes[i][j];
+        }
+        double average = sum / (runtimes[i].length - 1);
+
+        // Write data row
+        writer.write(size + "," + firstRun + "," + average + "\n");
+      }
+
+      System.out.println("Results saved to " + fileName);
+    } catch (IOException e) {
+      System.err.println("Error writing to CSV file: " + e.getMessage());
     }
   }
 
@@ -77,9 +88,7 @@ public class MergeSort {
     double[] L = new double[nL];
     double[] R = new double[nR];
 
-    for (int i = 0; i < nL; i++) {
-      L[i] = A[p + i];
-    }
+      System.arraycopy(A, p + 0, L, 0, nL);
     for (int j = 0; j < nR; j++) {
       R[j] = A[q + 1 + j];
     }

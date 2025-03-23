@@ -1,3 +1,5 @@
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,7 +19,8 @@ public class ParallelMergeSortCoarsened {
         int[] exponents = {3, 4, 5, 6, 7, 8};
         int threshold = 10;
         Map<Integer, double[]> preallocated = preallocateArrays(exponents);
-        runParallelMergeSort(outerLoops, exponents, preallocated, threshold);
+        double[][] results = runParallelMergeSort(outerLoops, exponents, preallocated, threshold);
+        saveResultsToCSV(results, exponents, "parallel_merge_sort_coarsened_results.csv");
     }
 
     private static Map<Integer, double[]> preallocateArrays(int[] exponents) {
@@ -35,26 +38,54 @@ public class ParallelMergeSortCoarsened {
         return arrays;
     }
 
-    private static void runParallelMergeSort(
+    private static double[][] runParallelMergeSort(
             int outerLoops, int[] exponents, Map<Integer, double[]> arrays, int threshold) {
-        System.out.println("Running Parallel MergeSort for Benchmarking:");
-        for (int loop = 1; loop <= outerLoops; loop++) {
-            System.out.println("Iteration " + loop + ":");
-            for (int exp : exponents) {
-                int size = (int) Math.pow(10, exp);
+        System.out.println("Running Parallel MergeSort with Coarsened Base Case for Benchmarking:");
+        double[][] runtimes = new double[exponents.length][outerLoops];
+
+        for (int loop = 0; loop < outerLoops; loop++) {
+            System.out.println("Iteration " + (loop + 1) + ":");
+            for (int i = 0; i < exponents.length; i++) {
+                int size = (int) Math.pow(10, exponents[i]);
                 double[] original = arrays.get(size);
                 double[] toSort = Arrays.copyOf(original, original.length);
                 long startTime = System.nanoTime();
                 pool.invoke(new parallelMergeSort(toSort, 0, toSort.length - 1, threshold));
                 long elapsed = System.nanoTime() - startTime;
-                System.out.println("  Array size " + size + " - Time (ns): " + elapsed);
+                runtimes[i][loop] = elapsed / 1e9; // Convert to seconds
+                System.out.println("  Array size " + size + " - Time (s): " + runtimes[i][loop]);
             }
             System.out.println();
+        }
+        return runtimes;
+    }
+
+    private static void saveResultsToCSV(double[][] runtimes, int[] exponents, String fileName) {
+        try (FileWriter writer = new FileWriter(fileName)) {
+            // Write header
+            writer.write("Array Size,First Run,Average of Remaining 9 Runs\n");
+
+            for (int i = 0; i < exponents.length; i++) {
+                int size = (int) Math.pow(10, exponents[i]);
+                double firstRun = runtimes[i][0];
+                double sum = 0;
+                for (int j = 1; j < runtimes[i].length; j++) {
+                    sum += runtimes[i][j];
+                }
+                double average = sum / (runtimes[i].length - 1);
+
+                // Write data row
+                writer.write(size + "," + firstRun + "," + average + "\n");
+            }
+
+            System.out.println("Results saved to " + fileName);
+        } catch (IOException e) {
+            System.err.println("Error writing to CSV file: " + e.getMessage());
         }
     }
 
     private static void runManualTest() {
-        System.out.println("Running manual test scenario for Parallel MergeSort:");
+        System.out.println("Running manual test scenario for Parallel MergeSort with Coarsened Base Case:");
         double[] testArray = new double[10];
         for (int i = 0; i < testArray.length; i++) {
             testArray[i] = Math.random();

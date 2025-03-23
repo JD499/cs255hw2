@@ -1,3 +1,5 @@
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -10,7 +12,8 @@ public class MergeSortCoarsened {
     int[] exponents = {3, 4, 5, 6, 7, 8};
     int threshold = 10;
     Map<Integer, double[]> preallocated = preallocateArrays(exponents);
-    runMergeSortCoarsened(outerLoops, exponents, preallocated, threshold);
+    double[][] results = runMergeSortCoarsened(outerLoops, exponents, preallocated, threshold);
+    saveResultsToCSV(results, exponents, "merge_sort_coarsened_results.csv");
   }
 
   private static void runManualTest() {
@@ -48,31 +51,59 @@ public class MergeSortCoarsened {
     return arrays;
   }
 
-  private static void runMergeSortCoarsened(
+  private static double[][] runMergeSortCoarsened(
       int outerLoops, int[] exponents, Map<Integer, double[]> arrays, int threshold) {
     System.out.println(
         "Running MergeSort with coarsened base case (threshold = "
             + threshold
             + ") for Benchmarking:");
-    for (int loop = 1; loop <= outerLoops; loop++) {
-      System.out.println("Iteration " + loop + ":");
-      for (int exp : exponents) {
-        int size = (int) Math.pow(10, exp);
+    double[][] runtimes = new double[exponents.length][outerLoops];
+
+    for (int loop = 0; loop < outerLoops; loop++) {
+      System.out.println("Iteration " + (loop + 1) + ":");
+      for (int i = 0; i < exponents.length; i++) {
+        int size = (int) Math.pow(10, exponents[i]);
         double[] original = arrays.get(size);
         double[] toSort = Arrays.copyOf(original, original.length);
         long startTime = System.nanoTime();
         mergesortCoarsened(toSort, 0, toSort.length - 1, threshold);
         long elapsed = System.nanoTime() - startTime;
-        System.out.println("  Array size " + size + " - Time (ns): " + elapsed);
+        runtimes[i][loop] = elapsed / 1e9; // Convert to seconds
+        System.out.println("  Array size " + size + " - Time (s): " + runtimes[i][loop]);
       }
       System.out.println();
+    }
+    return runtimes;
+  }
+
+  private static void saveResultsToCSV(double[][] runtimes, int[] exponents, String fileName) {
+    try (FileWriter writer = new FileWriter(fileName)) {
+      // Write header
+      writer.write("Array Size,First Run,Average of Remaining 9 Runs\n");
+
+      for (int i = 0; i < exponents.length; i++) {
+        int size = (int) Math.pow(10, exponents[i]);
+        double firstRun = runtimes[i][0];
+        double sum = 0;
+        for (int j = 1; j < runtimes[i].length; j++) {
+          sum += runtimes[i][j];
+        }
+        double average = sum / (runtimes[i].length - 1);
+
+        // Write data row
+        writer.write(size + "," + firstRun + "," + average + "\n");
+      }
+
+      System.out.println("Results saved to " + fileName);
+    } catch (IOException e) {
+      System.err.println("Error writing to CSV file: " + e.getMessage());
     }
   }
 
   public static void mergesortCoarsened(double[] A, int p, int r, int k) {
     if (r - p + 1 <= k) {
-        insertionSort(A, p, r);
-        return;
+      insertionSort(A, p, r);
+      return;
     }
     int q = (p + r) / 2;
     mergesortCoarsened(A, p, q, k);
@@ -86,11 +117,9 @@ public class MergeSortCoarsened {
     double[] L = new double[nL];
     double[] R = new double[nR];
 
-    for (int i = 0; i < nL; i++) {
-        L[i] = A[p + i];
-    }
+      System.arraycopy(A, p + 0, L, 0, nL);
     for (int j = 0; j < nR; j++) {
-        R[j] = A[q + 1 + j];
+      R[j] = A[q + 1 + j];
     }
 
     int i = 0;
@@ -121,16 +150,15 @@ public class MergeSortCoarsened {
     }
   }
 
-    public static void insertionSort(double[] A, int p, int r) {
-        for (int i = p + 1; i <= r; i++) {
-            double key = A[i];
-            int j = i - 1;
-            while (j >= p && A[j] > key) {
-                A[j + 1] = A[j];
-                j = j - 1;
-            }
-            A[j + 1] = key;
-        }
+  public static void insertionSort(double[] A, int p, int r) {
+    for (int i = p + 1; i <= r; i++) {
+      double key = A[i];
+      int j = i - 1;
+      while (j >= p && A[j] > key) {
+        A[j + 1] = A[j];
+        j = j - 1;
+      }
+      A[j + 1] = key;
     }
-
+  }
 }
