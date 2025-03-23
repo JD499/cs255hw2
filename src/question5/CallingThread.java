@@ -2,7 +2,6 @@ package question5;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -104,7 +103,7 @@ public class CallingThread {
 			}
 
 			try (ICSVWriter writer = new CSVWriterBuilder(
-					new FileWriter("question5.csv"))
+					new FileWriter("Question5.csv"))
 					.build()) {
 				writer.writeAll(csvData);
 
