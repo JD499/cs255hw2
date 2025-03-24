@@ -6,11 +6,32 @@ import java.util.Map;
 
 public class MergeSort {
   public static void main(String[] args) {
+    runManualTest();
     int outerLoops = 10;
     int[] exponents = {3, 4, 5, 6, 7, 8};
     Map<Integer, double[]> preallocated = preallocateArrays(exponents);
     double[][] results = runMergeSort(outerLoops, exponents, preallocated);
     saveResultsToCSV(results, exponents, "merge_sort_results.csv");
+  }
+
+  private static void runManualTest() {
+    System.out.println("Running manual test scenario for MergeSort:");
+    double[] testArray = new double[10];
+
+    for (int i = 0; i < testArray.length; i++) {
+      testArray[i] = Math.random();
+    }
+
+    System.out.println("Before sorting: " + Arrays.toString(testArray));
+    double[] expectedArray = Arrays.copyOf(testArray, testArray.length);
+    Arrays.sort(expectedArray);
+
+    mergeSort(testArray, 0, testArray.length - 1);
+    System.out.println("After sorting:  " + Arrays.toString(testArray));
+
+    boolean isCorrect = Arrays.equals(testArray, expectedArray);
+    System.out.println("Sort correct:   " + isCorrect);
+    System.out.println();
   }
 
   private static Map<Integer, double[]> preallocateArrays(int[] exponents) {
